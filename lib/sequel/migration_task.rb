@@ -31,11 +31,12 @@ module Sequel
 
       desc "Migrates the database to [:version] or the latest version"
       task :migrate, [:version] => :environment do |t, args|
-        db = if defined?(DB)
-               DB
-             else
-               self.db
-             end
+        db = self.db
+
+        if db.nil? && defined?(DB)
+          db = DB
+        end
+
         if db.nil?
           fail('No database has been defined.  Either create a DB constant' +
                ' in your :environment task or set the @db variable in the' +

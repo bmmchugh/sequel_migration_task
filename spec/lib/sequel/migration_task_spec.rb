@@ -103,6 +103,12 @@ module Sequel
         end
       end
 
+      after do
+        if defined?(DB)
+          Sequel.module_eval { remove_const :DB }
+        end
+      end
+
       it 'should define an environment task' do
         Rake::Task.task_defined?(:environment).should be_true
       end
@@ -136,8 +142,42 @@ module Sequel
         Rake.application = @rake
         @task = MigrationTask.new do | t |
           t.db = @db
-        t.directory = @directory
+          t.directory = @directory
         end
+        Sequel::Migrator.should_receive(:run).with(@db, @directory, {})
+        Rake::Task[:migrate].invoke
+      end
+
+      it 'should execute migrations using a DB constant' do
+        @rake = Rake::Application.new
+        Rake.application = @rake
+        @task = MigrationTask.new do | t |
+          t.directory = @directory
+        end
+        DB = mock
+        Sequel::Migrator.should_receive(:run).with(DB, @directory, {})
+        Rake::Task[:migrate].invoke
+      end
+
+      it 'should execute migrations using a DB constant' do
+        @rake = Rake::Application.new
+        Rake.application = @rake
+        @task = MigrationTask.new do | t |
+          t.directory = @directory
+        end
+        DB = mock
+        Sequel::Migrator.should_receive(:run).with(DB, @directory, {})
+        Rake::Task[:migrate].invoke
+      end
+
+      it 'should execute migrations on the instance over DB constant' do
+        @rake = Rake::Application.new
+        Rake.application = @rake
+        @task = MigrationTask.new do | t |
+          t.db = @db
+          t.directory = @directory
+        end
+        DB = mock
         Sequel::Migrator.should_receive(:run).with(@db, @directory, {})
         Rake::Task[:migrate].invoke
       end
