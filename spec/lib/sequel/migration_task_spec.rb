@@ -4,95 +4,120 @@ module Sequel
 
   describe MigrationTask do
 
-    it 'should require a directory' do
-      expect {
-        MigrationTask.new
-      }.to raise_error
+    before do
+      @db = mock(Sequel::Database)
+      @db.stub!(:is_a?).and_return(false)
+      @db.stub!(:is_a?).with(Sequel::Database).and_return(true)
+      @directory = 'migrations'
     end
 
-    describe 'directory' do
-      before do
-        @directory = 'migrations'
-      end
-
-      it 'should be set from the options' do
-        t = MigrationTask.new(:directory => @directory)
-        t.directory.should == @directory
-      end
-
-      it 'should set directory from the block' do
-        t = MigrationTask.new do | task |
-          task.directory = @directory
-        end
-        t.directory.should == @directory
+    after do
+      if defined?(DB)
+        Sequel.module_eval { remove_const :DB }
       end
     end
 
-    describe 'db' do
-      before do
-        @db = mock
+    describe 'arguments' do
+
+      it 'should require a directory' do
+        expect {
+          MigrationTask.new
+        }.to raise_error
       end
 
-      it 'should be set from the options' do
-        t = MigrationTask.new(:directory => 'x', :db => @db)
-        t.db.should == @db
-      end
+      describe 'directory' do
 
-      it 'should be set from the block' do
-        t = MigrationTask.new(:directory => 'x') do | task |
-          task.db = @db
+        it 'should be set from the arguments' do
+          t = MigrationTask.new(@directory)
+          t.directory.should == @directory
         end
 
-        t.db.should == @db
-      end
-    end
-
-
-    describe 'column' do
-      before do
-        @column = 'version_number'
-      end
-
-      it 'should be set from the options' do
-        t = MigrationTask.new(:directory => 'x', :column => @column)
-        t.column.should == @column
-      end
-
-      it 'should be set from the block' do
-        t = MigrationTask.new(:directory => 'x') do | task |
-          task.column = @column
+        it 'should be set from the options' do
+          t = MigrationTask.new(:directory => @directory)
+          t.directory.should == @directory
         end
 
-        t.column.should == @column
-      end
-    end
-
-    describe 'table' do
-      before do
-        @table = 'schema_information'
-      end
-
-      it 'should be set from the options' do
-        t = MigrationTask.new(:directory => 'x', :table => @table)
-        t.table.should == @table
+        it 'should set directory from the block' do
+          t = MigrationTask.new do | task |
+            task.directory = @directory
+          end
+          t.directory.should == @directory
+        end
       end
 
-      it 'should be set from the block' do
-        t = MigrationTask.new(:directory => 'x') do | task |
-          task.table = @table
+      describe 'db' do
+
+        it 'should be set from the arguments' do
+          t = MigrationTask.new(@directory, @db)
+          t.db.should == @db
         end
 
-        t.table.should == @table
+        it 'should not depend on argument order' do
+          t = MigrationTask.new(@db, @directory)
+          t.db.should == @db
+          t.directory.should == @directory
+        end
+
+        it 'should be set from the options' do
+          t = MigrationTask.new(@directory, :db => @db)
+          t.db.should == @db
+        end
+
+        it 'should be set from the block' do
+          t = MigrationTask.new(:directory => 'x') do | task |
+            task.db = @db
+          end
+
+          t.db.should == @db
+        end
+      end
+
+      describe 'column' do
+
+        before do
+          @column = 'version_number'
+        end
+
+        it 'should be set from the options' do
+          t = MigrationTask.new(@directory, :column => @column)
+          t.column.should == @column
+        end
+
+        it 'should be set from the block' do
+          t = MigrationTask.new(@directory) do | task |
+            task.column = @column
+          end
+
+          t.column.should == @column
+        end
+      end
+
+      describe 'table' do
+
+        before do
+          @table = 'schema_information'
+        end
+
+        it 'should be set from the options' do
+          t = MigrationTask.new(@directory, :table => @table)
+          t.table.should == @table
+        end
+
+        it 'should be set from the block' do
+          t = MigrationTask.new(@directory) do | task |
+            task.table = @table
+          end
+
+          t.table.should == @table
+        end
       end
     end
 
     describe 'tasks' do
 
       before do
-        @db              = mock
         @table           = 'table'
         @column          = 'column'
-        @directory       = 'directory'
         @rake            = Rake::Application.new
         Rake.application = @rake
         @task = MigrationTask.new do | t |
@@ -100,12 +125,6 @@ module Sequel
           t.table     = @table
           t.column    = @column
           t.directory = @directory
-        end
-      end
-
-      after do
-        if defined?(DB)
-          Sequel.module_eval { remove_const :DB }
         end
       end
 
