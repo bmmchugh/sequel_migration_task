@@ -4,6 +4,8 @@ module Sequel
 
   describe MigrationTask do
 
+    # DEBUG = true
+
     before do
       @db = mock(Sequel::Database)
       @db.stub!(:is_a?).and_return(false)
@@ -109,6 +111,56 @@ module Sequel
           end
 
           t.table.should == @table
+        end
+      end
+
+      describe 'connection' do
+
+        before do
+          @db_from_connection = mock
+          Sequel.stub!(:connect).and_return(@db_from_connection)
+        end
+
+        it 'should not create a connection when a connection is given' do
+          t = MigrationTask.new(
+            @directory,
+            @db,
+            'postgres://localhost/db',
+            :user => 'joe',
+            :password => 'schmoe')
+          t.db.should == @db
+        end
+
+        it 'should create a connection with additional parameters' do
+          Sequel.should_receive(:connect).with(
+            'postgres://localhost/db',
+            :user => 'joe',
+            :password => 'schmoe').and_return(@db_from_connection)
+          t = MigrationTask.new(
+            @directory,
+            'postgres://localhost/db',
+            :user => 'joe',
+            :password => 'schmoe')
+          t.db.should == @db_from_connection
+        end
+
+        it 'should create a connection with a hash' do
+          Sequel.should_receive(:connect).with(
+            :adapter        => 'postgres',
+            :host           => 'localhost',
+            :database       => 'db',
+            :user           => 'joe',
+            :password       => 'schmoe',
+            :default_schema => 'test').and_return(@db_from_connection)
+          t = MigrationTask.new(
+            @directory,
+            :adapter        => 'postgres',
+            :host           => 'localhost',
+            :database       => 'db',
+            :user           => 'joe',
+            :password       => 'schmoe',
+            :default_schema => 'test')
+          t.db.should == @db_from_connection
         end
       end
     end

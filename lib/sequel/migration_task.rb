@@ -13,18 +13,51 @@ module Sequel
 
     def initialize(*args)
       debug { "Initializing with arguments #{args.inspect}" }
-      options = check_for_options(*args)
+
+      # check for options
+      options = {}
+      debug { "Checking for options from #{args.inspect}" }
+      args.delete_if do | arg |
+        if arg.is_a?(Hash) and (
+          arg.keys.include?(:directory) or
+          arg.keys.include?(:db) or
+          arg.keys.include?(:table) or
+          arg.keys.include?(:column))
+          debug { "Found options #{arg.inspect}" }
+          options = arg
+          true
+        end
+      end
       self.directory = options[:directory]# if self.directory.nil?
       self.db        = options[:db] #if self.db.nil?
       self.table     = options[:table] #if self.table.nil?
       self.column    = options[:column] #if self.column.nil?
 
-      check_for_parameters(*args)
+      # check for parameters
+      debug { "Checking for parameters from #{args.inspect}" }
+      args.delete_if do | arg |
+        debug { "Checking for parameter from #{arg.inspect}" }
+        if self.directory.nil? and arg.is_a?(String)
+          debug { "Found directory parameter #{arg}" }
+          self.directory = arg
+          true
+        elsif self.db.nil? and arg.is_a?(Sequel::Database)
+          debug { "Found db parameter #{arg}" }
+          self.db = arg
+          true
+        end
+      end
 
       yield(self) if block_given?
 
       if self.directory.nil?
         raise "Migration directory ':directory' must be defined"
+      end
+
+      # create a database connection
+      if self.db.nil? and !args.empty?
+        debug { "Creating a database connection with #{args.inspect}" }
+        self.db = Sequel.connect(*args)
       end
       define_tasks
     end
